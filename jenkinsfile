@@ -8,8 +8,7 @@ pipeline {
             }
         }
 
-     stages {
-        stage('Setup Environment') {
+      stage('Setup Environment') {
             steps {
                 bat '''
                     "C:\\Users\\Egor\\AppData\\Local\\Programs\\Python\\Python311\\python.exe" -m venv .\\venv
