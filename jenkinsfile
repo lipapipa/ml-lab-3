@@ -10,14 +10,15 @@ pipeline {
 
         stage('Setup Environment') {
              steps {
-                 bat '''
-                     python -m venv venv
-                     call venv\\Scripts\\activate
-                     python -m ensurepip --upgrade
-                     pip install --upgrade pip
-                     pip install setuptools
-                     pip install -r requirements.txt
-                 '''
+                    bat '''
+                    chcp 65001 >nul
+                    python -m venv venv
+                    call venv\\Scripts\\activate
+                    python -m ensurepip --upgrade
+                    pip install --upgrade pip setuptools
+                    pip install -r requirements.txt
+                    pip install mlflow
+                '''
             }
         }
 
