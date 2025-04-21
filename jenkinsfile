@@ -28,15 +28,34 @@ pipeline {
             }
         }
 
-        stage('Train Model') {
-            steps {
-                bat '''
-                   .\\venv\\Scripts\\activate.bat
-                    echo "Start train model"
-                    python train_model.py > best_model.txt
-                '''
-            }
-        }
+     stage('Train Model') {
+    steps {
+        bat '''
+            call .\\venv\\Scripts\\activate.bat
+            
+            # Очистка старого файла
+            if exist best_model.txt del best_model.txt
+            
+            # Запуск с логированием ошибок
+            python train_model.py > training_output.log 2> training_errors.log || (
+                echo [ERROR] Training failed!
+                type training_errors.log
+                exit 1
+            )
+            
+            # Проверка создания файла
+            if not exist best_model.txt (
+                echo [ERROR] best_model.txt not created!
+                echo Training output:
+                type training_output.log
+                exit 1
+            )
+            
+            echo Model path saved:
+            type best_model.txt
+        '''
+    }
+}
 
 stage('Start MLflow Service') {
     steps {
