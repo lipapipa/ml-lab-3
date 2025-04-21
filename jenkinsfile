@@ -38,26 +38,32 @@ pipeline {
             }
         }
 
-        stage('Start MLflow Service') {
-            steps {
-                bat '''
-                    .\\venv\\Scripts\\activate
-                    set BUILD_ID=dontKillMe
-                    set JENKINS_NODE_COOKIE=dontKillMe
-                    for /f "delims=" %%i in (best_model.txt) do set MODEL_PATH=%%i
-                    start "" mlflow models serve -m %MODEL_PATH% -p 5003 --no-conda
-                    timeout /t 5 /nobreak > nul
-                '''
-            }
-        }
-        
-        stage('Test MLflow Service') {
-            steps {
-                bat '''
-                    curl http://127.0.0.1:5003/invocations ^
-                    -H "Content-Type: application/json" ^
-                    --data "{\"inputs\": [[-1.75938045, -1.2340347, -1.4132767553, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538, -1.75938045, -1.2340347, -1.41327673, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538,-1.75938045, -1.2340347, -1.41327673]]}"
-                '''
+      stage('Start MLflow Service') {
+    steps {
+        bat '''
+            call .\\venv\\Scripts\\activate.bat
+            set BUILD_ID=dontKillMe
+            set JENKINS_NODE_COOKIE=dontKillMe
+            set /p MODEL_PATH=<best_model.txt
+            echo Starting MLflow with model: %MODEL_PATH%
+            
+            start "MLflowServe" cmd /c "mlflow models serve -m %MODEL_PATH% -p 5003 --host 0.0.0.0 --no-conda 2> mlflow_errors.log"
+            timeout /t 15 /nobreak > nul
+            
+            type mlflow_errors.log
+            netstat -ano | findstr 5003 || echo "MLflow server failed to start"
+        '''
+    }
+}
+
+stage('Test MLflow Service') {
+    steps {
+        bat '''
+            curl -v -X POST http://127.0.0.1:5003/invocations ^
+                 -H "Content-Type: application/json" ^
+                 --data "{\\"inputs\\": [[-1.759, -1.234, -1.413, 0.761, 2.200, -0.109, 0.589, 0.113]]}"
+        '''
+
             }
         }
     }
