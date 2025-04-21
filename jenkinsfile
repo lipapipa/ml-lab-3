@@ -16,8 +16,8 @@ pipeline {
                     "C:\\Users\\Egor\\AppData\\Local\\Programs\\Python\\Python311\\python.exe" -m pip install --upgrade pip
                     pip install -r requirements.txt
                 '''
-            }
-        }
+            
+        
             }
         }
 
