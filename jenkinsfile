@@ -4,20 +4,18 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                checkout scm  // Получаем код из GitHub репозитория
+                checkout scm // Получаем код из GitHub репозитория
             }
         }
 
         stage('Setup Environment') {
-             steps {
-                    bat '''
-                    chcp 65001 >nul
+            steps {
+                bat '''
                     python -m venv venv
                     call venv\\Scripts\\activate
                     python -m ensurepip --upgrade
-                    pip install --upgrade pip setuptools
+                    pip install setuptools
                     pip install -r requirements.txt
-                    pip install mlflow
                 '''
             }
         }
@@ -25,12 +23,11 @@ pipeline {
         stage('Download Data') {
             steps {
                 bat '''
-                    call ./venv/Scripts/activate
+                    call venv\\Scripts\\activate
                     python download.py
                 '''
             }
         }
-
         stage('Train Model') {
             steps {
                 bat '''
