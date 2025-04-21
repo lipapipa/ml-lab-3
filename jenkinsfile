@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                checkout scm // Получаем код из GitHub репозитория
+                checkout scm // 
             }
         }
 
