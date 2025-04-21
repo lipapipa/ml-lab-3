@@ -41,41 +41,22 @@ pipeline {
    stage('Start MLflow Service') {
     steps {
         bat '''
-            call .\\venv\\Scripts\\activate.bat
-            
-            # Читаем путь к модели
-            set /p MODEL_PATH=<best_model.txt
-            echo MODEL_PATH: %MODEL_PATH%
-            
-            # Запускаем сервер в отдельном окне с логами
-            start "MLflowServer" cmd /k "mlflow models serve -m %MODEL_PATH% -p 5003 --host 0.0.0.0 --no-conda > mlflow_server.log 2>&1"
-            
-            # Даем время на запуск (30 секунд)
-            timeout /t 30 /nobreak > nul
-            
-            # Проверяем процесс
-            tasklist | findstr mlflow || echo "MLflow process not found"
-            
-            # Проверяем порт
-            netstat -ano | findstr 5003 || echo "Port 5003 not listening"
-            
-            # Выводим логи сервера
-            type mlflow_server.log
-        '''
+                    . ./venv/bin/activate
+                    export BUILD_ID=dontKillMe
+                    export JENKINS_NODE_COOKIE=dontKillMe
+                    path_model=$(cat best_model.txt)
+                    mlflow models serve -m $path_model -p 5003 --no-conda &
+                '''
     }
 }
 
 stage('Test MLflow Service') {
     steps {
         bat '''
-            # Проверка доступности сервера
-            curl -v -m 10 http://127.0.0.1:5003 || echo "Server not responding"
-            
-            # Основной запрос
-            curl -X POST http://127.0.0.1:5003/invocations ^
-                 -H "Content-Type: application/json" ^
-                 --data "{\\"inputs\\": [[-1.759, -1.234, -1.413, 0.761, 2.200, -0.109, 0.589, 0.113]]}"
-        '''
+                curl http://127.0.0.1:5003/invocations \
+                -H "Content-Type: application/json" \
+                --data '{"inputs": [[-1.75938045, -1.2340347, -1.4132767553, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538, -1.75938045, -1.2340347, -1.41327673, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538,-1.75938045, -1.2340347, -1.41327673]]}'
+                '''
     
 
             }
