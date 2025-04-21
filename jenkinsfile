@@ -4,16 +4,17 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                checkout scm
+                checkout scm // Получаем код из GitHub репозитория
             }
         }
 
-      stage('Setup Environment') {
+        stage('Setup Environment') {
             steps {
                 bat '''
-                    "C:\\Users\\Egor\\AppData\\Local\\Programs\\Python\\Python311\\python.exe" -m venv .\\venv
-                    call .\\venv\\Scripts\\activate.bat
-                    "C:\\Users\\Egor\\AppData\\Local\\Programs\\Python\\Python311\\python.exe" -m pip install --upgrade pip
+                    python -m venv venv
+                    call venv\\Scripts\\activate
+                    python -m ensurepip --upgrade
+                    pip install setuptools
                     pip install -r requirements.txt
                 '''
             }
@@ -22,74 +23,43 @@ pipeline {
         stage('Download Data') {
             steps {
                 bat '''
-                    .\\venv\\Scripts\\activate
+                    call venv\\Scripts\\activate
                     python download.py
                 '''
             }
         }
 
-     stage('Train Model') {
-    steps {
-        bat '''
-            call .\\venv\\Scripts\\activate.bat
-            
-               .\\venv\\Scripts\\activate.bat
-                    echo "Start train model"
+        stage('Train Model') {
+            steps {
+                bat '''
+                    call venv\\Scripts\\activate
+                    echo Start train model
                     python train_model.py > best_model.txt
-        '''
-    }
-}
-
-stage('Start MLflow Service') {
-    steps {
-        bat '''
-            call .\\venv\\Scripts\\activate.bat
-            set BUILD_ID=dontKillMe
-            set JENKINS_NODE_COOKIE=dontKillMe
-
-            # Проверяем файл модели
-            if not exist best_model.txt (
-                echo ОШИБКА: Файл best_model.txt не найден!
-                exit 1
-            )
-
-            # Читаем путь к модели
-            set /p MODEL_PATH=<best_model.txt
-            echo Используем модель: %MODEL_PATH%
-
-            # Проверяем доступность MLflow
-            where mlflow || (
-                echo ОШИБКА: MLflow не установлен в venv!
-                pip list
-                exit 1
-            )
-
-            # Запускаем сервер с логами
-            start "MLflowServer" cmd /k "mlflow models serve -m %MODEL_PATH% -p 5003 --host 0.0.0.0 --no-conda > mlflow.log 2>&1"
-            
-            # Ждём 30 секунд
-            timeout /t 30 /nobreak > nul
-
-            # Проверяем работу
-            tasklist | findstr mlflow || (
-                echo ОШИБКА: Сервер не запустился!
-                type mlflow.log
-                exit 1
-            )
-        '''
-    }
-}
-
-stage('Test MLflow Service') {
-    steps {
-        bat '''
-                curl http://127.0.0.1:5003/invocations \
-                -H "Content-Type: application/json" \
-                --data '{"inputs": [[-1.75938045, -1.2340347, -1.4132767553, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538, -1.75938045, -1.2340347, -1.41327673, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538,-1.75938045, -1.2340347, -1.41327673]]}'
                 '''
-    
+            }
+        }
 
+        stage('Start MLflow Service') {
+            steps {
+                bat '''
+                    call venv\\Scripts\\activate
+                    set BUILD_ID=dontKillMe
+                    set JENKINS_NODE_COOKIE=dontKillMe
+                    for /f "delims=" %%i in (best_model.txt) do set MODEL_PATH=%%i
+                    start /b mlflow models serve -m %MODEL_PATH% -p 5003 --no-conda
+                '''
+            }
+        }
+
+        stage('Test MLflow Service') {
+            steps {
+                bat '''
+                    curl http://127.0.0.1:5003/invocations ^
+                    -H "Content-Type: application/json" ^
+                    --data "{\\"inputs\\": [[-1.75938045, -1.2340347, -1.4132767553, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538, -1.75938045, -1.2340347, -1.41327673, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538, -1.75938045, -1.2340347, -1.41327673]]}"
+                '''
             }
         }
     }
 }
+
