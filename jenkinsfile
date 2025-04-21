@@ -11,12 +11,13 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 bat '''
-                    python -m venv venv
-                    call venv\\Scripts\\activate
-                    python -m ensurepip --upgrade
-                    pip install setuptools
+                    "C:\\Users\\Egor\\AppData\\Local\\Programs\\Python\\Python311\\python.exe" -m venv .\\venv
+                    call .\\venv\\Scripts\\activate.bat
+                    "C:\\Users\\Egor\\AppData\\Local\\Programs\\Python\\Python311\\python.exe" -m pip install --upgrade pip
                     pip install -r requirements.txt
                 '''
+            }
+        }
             }
         }
 
