@@ -39,20 +39,12 @@ pipeline {
             }
         }
 
-      stage('Start MLflow Service') {
+  stage('Start MLflow Service') {
     steps {
         bat '''
             chcp 65001 >nul
             call venv\\Scripts\\activate
-            set BUILD_ID=dontKillMe
-            set JENKINS_NODE_COOKIE=dontKillMe
-
-            for /f "usebackq delims=" %%i in (`powershell -Command "Get-Content best_model.txt -Raw"`) do (
-                set MODEL_PATH=%%i
-            )
-
-            echo Model path: %MODEL_PATH%
-            start /b mlflow models serve -m %MODEL_PATH% -p 5003 --no-conda
+            python serve_model.py
         '''
     }
 }
