@@ -2,23 +2,20 @@ pipeline {
     agent any
 
     stages {
-
         stage('Checkout Code') {
             steps {
-                checkout scm
+                checkout scm  // Получаем код из GitHub репозитория
             }
         }
 
         stage('Setup Environment') {
             steps {
                 bat '''
-                    chcp 65001 >nul
-                    python -m venv venv
-                    call venv\\Scripts\\activate
+                    python -m venv ./venv
+                    call ./venv/Scripts/activate
                     python -m ensurepip --upgrade
-                    pip install --upgrade pip setuptools
+                    pip install setuptools
                     pip install -r requirements.txt
-                    pip install mlflow
                 '''
             }
         }
@@ -26,8 +23,7 @@ pipeline {
         stage('Download Data') {
             steps {
                 bat '''
-                    chcp 65001 >nul
-                    call venv\\Scripts\\activate
+                    call ./venv/Scripts/activate
                     python download.py
                 '''
             }
@@ -36,20 +32,9 @@ pipeline {
         stage('Train Model') {
             steps {
                 bat '''
-                    chcp 65001 >nul
-                    call venv\\Scripts\\activate
-                    echo ==== TRAINING STARTED ====
-                    python train_model.py
-                '''
-            }
-        }
-
-        stage('Show Best Model Path') {
-            steps {
-                bat '''
-                    chcp 65001 >nul
-                    echo ==== CONTENTS OF best_model.txt ====
-                    type best_model.txt
+                    call ./venv/Scripts/activate
+                    echo Start train model
+                    python train_model.py > best_model.txt
                 '''
             }
         }
@@ -57,25 +42,23 @@ pipeline {
         stage('Start MLflow Service') {
             steps {
                 bat '''
-                    chcp 65001 >nul
-                    call venv\\Scripts\\activate
+                    call ./venv/Scripts/activate
                     set BUILD_ID=dontKillMe
                     set JENKINS_NODE_COOKIE=dontKillMe
-                    python serve_model.py
+                    for /f "delims=" %%x in (best_model.txt) do set path_model=%%x
+                    start /B mlflow models serve -m %path_model% -p 5003 --no-conda
                 '''
             }
         }
-
+        
         stage('Test MLflow Service') {
             steps {
                 bat '''
-                    chcp 65001 >nul
-                    curl -X POST http://127.0.0.1:5003/invocations ^
+                    curl http://127.0.0.1:5003/invocations ^
                     -H "Content-Type: application/json" ^
-                    --data "{\"inputs\": [[-1.75, -1.23, -1.41, 0.76, 2.20, -0.10, 0.58, 0.11, -1.75, -1.23, -1.41, 0.76, 2.20, -0.10, 0.58, 0.11, -1.75, -1.23, -1.41]]}"
+                    --data "{\"inputs\": [[-1.75938045, -1.2340347, -1.4132767553, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538, -1.75938045, -1.2340347, -1.41327673, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538,-1.75938045, -1.2340347, -1.41327673]]}"
                 '''
             }
         }
     }
 }
-
