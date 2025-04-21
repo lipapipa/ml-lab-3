@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                checkout scm  // Получаем код из GitHub репозитория
+                checkout scm
             }
         }
 
@@ -12,10 +12,10 @@ pipeline {
             steps {
                 bat '''
                     python -m venv .\\venv
-            .\\venv\\Scripts\\activate
-            python -m pip install --upgrade pip
-            pip install setuptools
-            pip install -r requirements.txt
+                    .\\venv\\Scripts\\activate
+                    python -m pip install --upgrade pip
+                    pip install setuptools
+                    pip install -r requirements.txt
                 '''
             }
         }
@@ -46,8 +46,8 @@ pipeline {
                     set BUILD_ID=dontKillMe
                     set JENKINS_NODE_COOKIE=dontKillMe
                     for /f "delims=" %%i in (best_model.txt) do set MODEL_PATH=%%i
-                    mlflow models serve -m %MODEL_PATH% -p 5003 --no-conda
-                    timeout /nobreak /t 5 > nul
+                    start "" mlflow models serve -m %MODEL_PATH% -p 5003 --no-conda
+                    timeout /t 5 /nobreak > nul
                 '''
             }
         }
@@ -57,4 +57,9 @@ pipeline {
                 bat '''
                     curl http://127.0.0.1:5003/invocations ^
                     -H "Content-Type: application/json" ^
-                   
+                    --data "{\"inputs\": [[-1.75938045, -1.2340347, -1.4132767553, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538, -1.75938045, -1.2340347, -1.41327673, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538,-1.75938045, -1.2340347, -1.41327673]]}"
+                '''
+            }
+        }
+    }
+}
