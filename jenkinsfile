@@ -20,6 +20,13 @@ pipeline {
                 '''
             }
         }
+        stage('Show Best Model Path') {
+            steps {
+            bat '''
+                type best_model.txt
+        '''
+    }
+}
 
         stage('Download Data') {
             steps {
@@ -52,6 +59,12 @@ pipeline {
 
         stage('Test MLflow Service') {
             steps {
-                bat '''
-                    curl http://127.0.0.1:5003
-
+                sh '''
+                    curl http://127.0.0.1:5003/invocations \
+                    -H "Content-Type: application/json" \
+                    --data '{"inputs": [[-1.75938045, -1.2340347, -1.4132767553, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538, -1.75938045, -1.2340347, -1.41327673, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538,-1.75938045, -1.2340347, -1.41327673]]}'
+                '''
+            }
+        }
+    }
+}
