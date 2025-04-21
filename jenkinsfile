@@ -38,20 +38,29 @@ pipeline {
             }
         }
 
-      stage('Start MLflow Service') {
+   stage('Start MLflow Service') {
     steps {
         bat '''
             call .\\venv\\Scripts\\activate.bat
-            set BUILD_ID=dontKillMe
-            set JENKINS_NODE_COOKIE=dontKillMe
+            
+            # Читаем путь к модели
             set /p MODEL_PATH=<best_model.txt
-            echo Starting MLflow with model: %MODEL_PATH%
+            echo MODEL_PATH: %MODEL_PATH%
             
-            start "MLflowServe" cmd /c "mlflow models serve -m %MODEL_PATH% -p 5003 --host 0.0.0.0 --no-conda 2> mlflow_errors.log"
-            timeout /t 15 /nobreak > nul
+            # Запускаем сервер в отдельном окне с логами
+            start "MLflowServer" cmd /k "mlflow models serve -m %MODEL_PATH% -p 5003 --host 0.0.0.0 --no-conda > mlflow_server.log 2>&1"
             
-            type mlflow_errors.log
-            netstat -ano | findstr 5003 || echo "MLflow server failed to start"
+            # Даем время на запуск (30 секунд)
+            timeout /t 30 /nobreak > nul
+            
+            # Проверяем процесс
+            tasklist | findstr mlflow || echo "MLflow process not found"
+            
+            # Проверяем порт
+            netstat -ano | findstr 5003 || echo "Port 5003 not listening"
+            
+            # Выводим логи сервера
+            type mlflow_server.log
         '''
     }
 }
@@ -59,10 +68,15 @@ pipeline {
 stage('Test MLflow Service') {
     steps {
         bat '''
-            curl -v -X POST http://127.0.0.1:5003/invocations ^
+            # Проверка доступности сервера
+            curl -v -m 10 http://127.0.0.1:5003 || echo "Server not responding"
+            
+            # Основной запрос
+            curl -X POST http://127.0.0.1:5003/invocations ^
                  -H "Content-Type: application/json" ^
                  --data "{\\"inputs\\": [[-1.759, -1.234, -1.413, 0.761, 2.200, -0.109, 0.589, 0.113]]}"
         '''
+    
 
             }
         }
