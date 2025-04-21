@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     stages {
+
         stage('Checkout Code') {
             steps {
                 checkout scm
@@ -11,26 +12,21 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 bat '''
+                    chcp 65001 >nul
                     python -m venv venv
                     call venv\\Scripts\\activate
                     python -m ensurepip --upgrade
-                    pip install --upgrade pip
-                    pip install setuptools
+                    pip install --upgrade pip setuptools
                     pip install -r requirements.txt
+                    pip install mlflow
                 '''
             }
         }
-        stage('Show Best Model Path') {
-            steps {
-            bat '''
-                type best_model.txt
-        '''
-    }
-}
 
         stage('Download Data') {
             steps {
                 bat '''
+                    chcp 65001 >nul
                     call venv\\Scripts\\activate
                     python download.py
                 '''
@@ -40,9 +36,20 @@ pipeline {
         stage('Train Model') {
             steps {
                 bat '''
+                    chcp 65001 >nul
                     call venv\\Scripts\\activate
-                    echo Starting training...
-                    python train_model.py 
+                    echo ==== TRAINING STARTED ====
+                    python train_model.py
+                '''
+            }
+        }
+
+        stage('Show Best Model Path') {
+            steps {
+                bat '''
+                    chcp 65001 >nul
+                    echo ==== CONTENTS OF best_model.txt ====
+                    type best_model.txt
                 '''
             }
         }
@@ -52,6 +59,8 @@ pipeline {
                 bat '''
                     chcp 65001 >nul
                     call venv\\Scripts\\activate
+                    set BUILD_ID=dontKillMe
+                    set JENKINS_NODE_COOKIE=dontKillMe
                     python serve_model.py
                 '''
             }
@@ -59,12 +68,14 @@ pipeline {
 
         stage('Test MLflow Service') {
             steps {
-                sh '''
-                    curl http://127.0.0.1:5003/invocations \
-                    -H "Content-Type: application/json" \
-                    --data '{"inputs": [[-1.75938045, -1.2340347, -1.4132767553, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538, -1.75938045, -1.2340347, -1.41327673, 0.76150439, 2.20097247, -0.10937195, 0.58931542, 0.1135538,-1.75938045, -1.2340347, -1.41327673]]}'
+                bat '''
+                    chcp 65001 >nul
+                    curl -X POST http://127.0.0.1:5003/invocations ^
+                    -H "Content-Type: application/json" ^
+                    --data "{\"inputs\": [[-1.75, -1.23, -1.41, 0.76, 2.20, -0.10, 0.58, 0.11, -1.75, -1.23, -1.41, 0.76, 2.20, -0.10, 0.58, 0.11, -1.75, -1.23, -1.41]]}"
                 '''
             }
         }
     }
 }
+
