@@ -38,15 +38,20 @@ pipeline {
             }
         }
 
-   stage('Start MLflow Service') {
+stage('Start MLflow Service') {
     steps {
         bat '''
-                    .\\venv\\Scripts\\activate.bat
-                    set BUILD_ID=dontKillMe
-                    set JENKINS_NODE_COOKIE=dontKillMe
-                    path_model=$(cat best_model.txt)
-                    mlflow models serve -m %path_model% -p 5003 --no-conda &
-                '''
+            call .\\venv\\Scripts\\activate.bat  # Активируем venv
+            set BUILD_ID=dontKillMe              # Задаем переменные
+            set JENKINS_NODE_COOKIE=dontKillMe
+            
+            # Читаем путь к модели
+            set /p path_model=<best_model.txt
+            echo Используем модель: %path_model%
+            
+            # Запускаем сервер
+            mlflow models serve -m %path_model% -p 5003 --host 0.0.0.0 --no-conda
+        '''
     }
 }
 
