@@ -35,7 +35,7 @@ pipeline {
                 bat '''
                     call venv\\Scripts\\activate
                     echo Starting training...
-                    python train_model.py > best_model.txt
+                    python train_model.py 
                 '''
             }
         }
